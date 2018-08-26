@@ -4,8 +4,6 @@ import java.io.File
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.util.*
-import kotlin.collections.HashMap
 import kotlin.system.exitProcess
 
 fun main(args: Array<String>) {
@@ -16,13 +14,13 @@ fun main(args: Array<String>) {
 
     val sales = checkSailsFile(args)
 
-    val dailyStats = TreeMap<Long, BigDecimal>()
+    val dailyStats = HashMap<Long, BigDecimal>()
     val officeStats = HashMap<Int, BigDecimal>()
 
     sales.bufferedReader().useLines {
         it.map(::parseLine).forEach { sale ->
-            dailyStats[sale.date] = dailyStats.getOrDefault(sale.date, BigDecimal.ZERO) + sale.amount
-            officeStats[sale.point] = officeStats.getOrDefault(sale.point, BigDecimal.ZERO) + sale.amount
+            dailyStats.merge(sale.date, sale.amount, BigDecimal::add)
+            officeStats.merge(sale.point, sale.amount, BigDecimal::add)
         }
     }
 
@@ -43,22 +41,22 @@ fun checkSailsFile(args: Array<String>): File {
     return sales
 }
 
-fun writeDailyStats(args: Array<String>, dailyStats: TreeMap<Long, BigDecimal>) {
+fun writeDailyStats(args: Array<String>, dailyStats: Map<Long, BigDecimal>) {
     val out = File(args[1])
     out.parentFile?.mkdirs()
-    out.bufferedWriter().use { out ->
-        dailyStats.forEach { date, sum ->
-            out.write("${LocalDate.ofEpochDay(date)} $sum\n")
+    out.bufferedWriter().use { writer ->
+        dailyStats.toSortedMap().forEach { date, sum ->
+            writer.write("${LocalDate.ofEpochDay(date)} $sum\n")
         }
     }
 }
 
-fun writeOfficeStats(args: Array<String>, officeStats: HashMap<Int, BigDecimal>) {
+fun writeOfficeStats(args: Array<String>, officeStats: Map<Int, BigDecimal>) {
     val out = File(args[2])
     out.parentFile?.mkdirs()
-    out.bufferedWriter().use { out ->
-        officeStats.asSequence().sortedByDescending { it.value }.forEach {
-            out.write("${it.key} ${it.value}\n")
+    out.bufferedWriter().use { writer ->
+        officeStats.asSequence().sortedByDescending { it.value }.forEach { (key, value) ->
+            writer.write("$key $value\n")
         }
     }
 }
